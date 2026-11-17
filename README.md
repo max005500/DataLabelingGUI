@@ -60,6 +60,8 @@ Las exclusiones solo ocultan grabaciones; sus etiquetas existentes se conservan.
 
 ## Interfaz
 
+![Captura de pantalla de KFall Labeler](assets/kfall-labeler.png)
+
 - **Izquierda:** filtros por sujeto y por estado (todas o solo pendientes), y la
   lista de grabaciones. Cada grabacion se marca como UCI HAR (●), antigua
   Dynamic/Static (◐) o pendiente (○).
