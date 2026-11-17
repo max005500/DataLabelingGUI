@@ -47,6 +47,26 @@ class LabelEditorTests(unittest.TestCase):
         self.root = Path(temporary.name)
         self.source = editor_fixture(self.root)
 
+    def test_default_catalog_includes_previously_excluded_tasks_with_descriptions(self):
+        template = self.source.catalog[0]["file"]
+        excluded_before = ("T05", "T13", "T14", "T15", "T16", "T18", "T19")
+        for code in excluded_before:
+            path = template.parent / f"S06{code}R01.csv"
+            path.write_bytes(template.read_bytes())
+        source = AnnotationSource(self.root, self.source.output, post_impact_seconds=0.05)
+        rows = {row["code"]: row for row in source.filtered("SA06")}
+        self.assertTrue(set(excluded_before).issubset(rows))
+        self.assertIn("suelo", rows["T05"]["description"])
+        self.assertIn("silla", rows["T13"]["description"])
+        self.assertIn("sofá", rows["T16"]["description"])
+        self.assertIn("cama", rows["T18"]["description"])
+        for code in excluded_before:
+            item = source.load(rows[code])
+            self.assertEqual(item.record["code"], code)
+        filtered = AnnotationSource(self.root, self.source.output, excluded_tasks=excluded_before,
+                                    post_impact_seconds=0.05)
+        self.assertTrue(all(row["code"] not in excluded_before for row in filtered.catalog))
+
     def test_native_frames_protection_undo_and_training_roundtrip(self):
         row = next(row for row in self.source.catalog if row["code"] == "T20")
         item = self.source.load(row)
@@ -85,6 +105,27 @@ class LabelEditorTests(unittest.TestCase):
             item.apply(0, 0.1, 1)
         with self.assertRaises(ValueError):
             item.apply(0.1, 0.1, 10)
+
+    def test_ascending_descending_roundtrip_and_dynamic_training(self):
+        row = next(row for row in self.source.catalog if row["code"] == "T20")
+        item = self.source.load(row)
+        item.apply(0, item.duration, 16)
+        item.apply(0.14, item.duration, 17)
+        np.testing.assert_array_equal(item.labels[item.protected], item.base[item.protected])
+        self.source.save(item)
+        document = json.loads(self.source.output.read_text())
+        self.assertEqual(document["recordings"][item.key]["activity_intervals"],
+                         [[101, 106, 6], [115, 121, 7]])
+        self.assertEqual(document["activity_to_training"]["Dynamic"], [0, 1, 2, 6, 7])
+        records, _ = load_manual_labels(self.source.output)
+        metadata = {**item.record, "manual_intervals": records[item.key]["intervals"]}
+        np.testing.assert_array_equal(window_activity_labels(item.frames, metadata, self.source.config),
+                                      item.training_labels)
+        self.assertTrue(np.all(item.training_labels[~item.protected] == 1))
+        reopened = AnnotationSource(self.root, self.source.output, post_impact_seconds=0.05)
+        np.testing.assert_array_equal(reopened.load(row).labels, item.labels)
+        self.assertTrue(reopened.reviewed(row))
+        self.assertNotIn(row, reopened.filtered(pending=True))
 
     def test_legacy_dynamic_static_entries_stay_pending_until_relabelled(self):
         item = self.source.load(self.source.catalog[0])

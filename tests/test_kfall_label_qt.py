@@ -59,6 +59,69 @@ class LabelQtTests(unittest.TestCase):
         self.assertEqual(window.files.count(), 1)
         self.assertEqual(window.current.record["subject"], "SA07")
 
+    def test_activity_title_tracks_selection_and_reference_button_opens_kfall(self):
+        from kfall_labeler.gui import KFALL_REFERENCE_URL, KFALL_TASK_REFERENCE_VIDEOS
+
+        window = self.window
+        window.select(0, 0.02)
+        window.apply(10)
+        self.assertEqual(window.activity_title.text(), "Caminando")
+
+        window.select(0.03, 0.05)
+        self.assertEqual(window.activity_title.text(), "Sin etiqueta")
+
+        with patch("kfall_labeler.gui.QtGui.QDesktopServices.openUrl", return_value=True) as open_url:
+            window.reference_button.click()
+        open_url.assert_called_once_with(QtCore.QUrl(KFALL_TASK_REFERENCE_VIDEOS[1]))
+
+        with patch.object(window, "confirm_leave", return_value=True):
+            window.files.setCurrentRow(1)
+        with patch("kfall_labeler.gui.QtGui.QDesktopServices.openUrl", return_value=True) as open_url:
+            window.reference_button.click()
+        open_url.assert_called_once_with(QtCore.QUrl(KFALL_TASK_REFERENCE_VIDEOS[15]))
+        with patch.dict(window.current.record, task_id=3), patch(
+                "kfall_labeler.gui.QtGui.QDesktopServices.openUrl", return_value=True) as open_url:
+            window.reference_button.click()
+        open_url.assert_called_once_with(QtCore.QUrl(KFALL_REFERENCE_URL))
+
+    def test_task_descriptions_follow_navigation(self):
+        window = self.window
+        self.assertIn("Permanecer de pie", window.files.item(0).text())
+        self.assertIn("Permanecer de pie", window.task_description.text())
+        window.files.setCurrentRow(1)
+        self.assertIn("T15", window.task_description.text())
+        self.assertIn("desplomarse sobre la silla", window.task_description.text())
+        self.assertIn("desplomarse sobre la silla", window.files.item(1).toolTip())
+
+    def test_cli_shows_all_tasks_by_default(self):
+        from kfall_labeler.editor import AnnotationSource
+        from kfall_labeler.label_kfall_manual import main
+
+        with patch("kfall_labeler.label_kfall_manual.AnnotationSource", wraps=AnnotationSource) as source:
+            main(["--dataset-root", str(self.source.catalog[0]["file"].parents[2]),
+                  "--output", str(self.source.output),
+                  "--save-frame", str(self.source.output.with_suffix(".png"))])
+        self.assertEqual(source.call_args.kwargs["excluded_tasks"], [])
+        self.assertTrue(self.source.output.with_suffix(".png").is_file())
+
+    def test_spanish_activity_buttons_and_new_shortcuts(self):
+        window = self.window
+        names = ("Caminando", "Subiendo escaleras", "Bajando escaleras",
+                 "Sentado", "De pie", "Acostado", "Subiendo", "Bajando")
+        for number, name in enumerate(names, start=1):
+            self.assertEqual(window.activity_buttons[number + 9].text(), f"{number}   {name}")
+        window.select(0, window.current.duration)
+        window.activateWindow()
+        window.setFocus()
+        self.app.processEvents()
+        for key, code, name in ((QtCore.Qt.Key.Key_7, 16, "Subiendo"),
+                                (QtCore.Qt.Key.Key_8, 17, "Bajando")):
+            QtTest.QTest.keyClick(window, key)
+            self.assertTrue(np.all(window.current.labels == code))
+            self.assertEqual(window.activity_title.text(), name)
+        window.undo()
+        self.assertTrue(np.all(window.current.labels == 16))
+
     def test_cancel_navigation_and_partial_save_protect_changes(self):
         window = self.window
         window.select(0, 0.02)
@@ -127,6 +190,7 @@ class LabelQtTests(unittest.TestCase):
         window.state_filter.setCurrentIndex(1)
         self.assertEqual(window.files.count(), 0)
         self.assertIsNone(window.current)
+        self.assertEqual(window.task_description.text(), "")
         window.start.setValue(0.01)
 
     def test_sensor_switch_uses_xyz_channels_and_preserves_view_and_labels(self):

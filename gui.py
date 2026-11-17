@@ -6,18 +6,21 @@ import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
 import pyqtgraph as pg
 
-from kfall_labeler.editor import UCI_CODE_OFFSET, UCI_CODES, UCI_HAR_ACTIVITIES
+from kfall_labeler.editor import ACTIVITIES, ACTIVITY_CODES, UCI_CODE_OFFSET
+from kfall_labeler.tasks import KFALL_REFERENCE_URL, KFALL_TASK_REFERENCE_VIDEOS
 
 ACTIVITY_NAMES = {
-    "WALKING": "Walking", "WALKING_UPSTAIRS": "Walking upstairs",
-    "WALKING_DOWNSTAIRS": "Walking downstairs", "SITTING": "Sitting",
-    "STANDING": "Standing", "LAYING": "Laying",
+    "WALKING": "Caminando", "WALKING_UPSTAIRS": "Subiendo escaleras",
+    "WALKING_DOWNSTAIRS": "Bajando escaleras", "SITTING": "Sentado",
+    "STANDING": "De pie", "LAYING": "Acostado",
+    "ASCENDING": "Subiendo", "DESCENDING": "Bajando",
 }
 NAMES = {-1: "Sin etiqueta", 0: "Fall (protegida)", 1: "Dynamic (antigua)", 2: "Static (antigua)",
          3: "PostImpact (protegida)",
-         **{UCI_CODE_OFFSET + k: ACTIVITY_NAMES[v] for k, v in UCI_HAR_ACTIVITIES.items()}}
+         **{UCI_CODE_OFFSET + k: ACTIVITY_NAMES[v] for k, v in ACTIVITIES.items()}}
 COLORS = {-1: "#334155", 0: "#f43f5e", 1: "#64748b", 2: "#94a3b8", 3: "#fb923c",
-          10: "#38bdf8", 11: "#818cf8", 12: "#c084fc", 13: "#34d399", 14: "#facc15", 15: "#2dd4bf"}
+          10: "#38bdf8", 11: "#818cf8", 12: "#c084fc", 13: "#34d399", 14: "#facc15", 15: "#2dd4bf",
+          16: "#fb7185", 17: "#fbbf24"}
 AXIS_COLORS = ("#f472b6", "#38bdf8", "#a3e635")
 BG, PANEL, CARD, BORDER, TEXT, MUTED, ACCENT = (
     "#0b1120", "#111827", "#172033", "#263449", "#e5e7eb", "#94a3b8", "#8b5cf6")
@@ -177,10 +180,25 @@ class LabelWindow(QtWidgets.QMainWindow):
         focus.clicked.connect(self.focus_selection)
         heading_row.addWidget(focus)
         top_layout.addLayout(heading_row)
+        self.task_description = label("", "subtitle")
+        self.task_description.setWordWrap(True)
+        top_layout.addWidget(self.task_description)
         hint = label("Arrastra sobre la senal para crear una ventana; mueve su interior o ajusta sus bordes  ·  "
-                     "Rueda: zoom  ·  Ctrl+arrastre: mover vista  ·  1-6: etiquetar  ·  Supr: borrar", "hint")
+                     "Rueda: zoom  ·  Ctrl+arrastre: mover vista  ·  1-8: etiquetar  ·  Supr: borrar", "hint")
         hint.setWordWrap(True)
         top_layout.addWidget(hint)
+        activity_row = QtWidgets.QHBoxLayout()
+        activity_row.addWidget(label("ACTIVIDAD", "section"))
+        self.activity_title = label("Sin actividad seleccionada", "heading")
+        self.activity_title.setStyleSheet("font-size: 11pt;")
+        activity_row.addWidget(self.activity_title)
+        activity_row.addStretch()
+        self.reference_button = QtWidgets.QPushButton("Videos de referencia KFall")
+        self.reference_button.setToolTip(
+            "Abrir el video de la tarea si esta disponible; si no, abrir el sitio oficial de KFall")
+        self.reference_button.clicked.connect(self.open_reference_video)
+        activity_row.addWidget(self.reference_button)
+        top_layout.addLayout(activity_row)
         body.addWidget(top)
 
         plot_card = card()
@@ -276,10 +294,10 @@ class LabelWindow(QtWidgets.QMainWindow):
         activities = QtWidgets.QGridLayout()
         activities.setSpacing(8)
         self.activity_buttons = {}
-        for number, code in enumerate(UCI_CODES, start=1):
+        for number, code in enumerate(ACTIVITY_CODES, start=1):
             color = COLORS[code]
             button = QtWidgets.QPushButton(f"{number}   {NAMES[code]}")
-            button.setToolTip(f"{UCI_HAR_ACTIVITIES[code - UCI_CODE_OFFSET]} (tecla {number})")
+            button.setToolTip(f"{NAMES[code]} (tecla {number})")
             button.setMinimumHeight(40)
             button.setStyleSheet(
                 f"QPushButton {{ background: {rgba(color, 30)}; border: 1px solid {rgba(color, 150)};"
@@ -299,7 +317,7 @@ class LabelWindow(QtWidgets.QMainWindow):
         next_button.setMinimumHeight(40)
         next_button.clicked.connect(self.next_recording)
         actions.addWidget(next_button)
-        activities.addLayout(actions, 0, 3, 2, 1)
+        activities.addLayout(actions, 0, 3, 3, 1)
         activities.setColumnStretch(3, 0)
         tools_layout.addLayout(activities)
         self.status = label("", "status")
@@ -322,6 +340,12 @@ class LabelWindow(QtWidgets.QMainWindow):
 
     def error(self, exc):
         QtWidgets.QMessageBox.critical(self, "No se pudo completar la operacion", str(exc))
+
+    def open_reference_video(self):
+        task_id = self.current.record["task_id"] if self.current is not None else None
+        url = KFALL_TASK_REFERENCE_VIDEOS.get(task_id, KFALL_REFERENCE_URL)
+        if not QtGui.QDesktopServices.openUrl(QtCore.QUrl(url)):
+            self.error("No se pudo abrir la pagina oficial de referencias de KFall.")
 
     def confirm_leave(self):
         if self.current is None or not self.current.dirty:
@@ -355,9 +379,10 @@ class LabelWindow(QtWidgets.QMainWindow):
                  "pending": ("○", "#64748b", "pendiente")}
         for row in rows:
             icon, color, status = marks[self.source.status(row)]
-            item = QtWidgets.QListWidgetItem(f"{icon}   {row['subject']}  ·  {row['code']}  ·  {row['trial']}")
+            item = QtWidgets.QListWidgetItem(
+                f"{icon}   {row['subject']}  ·  {row['code']}  ·  {row['trial']}\n{row['description']}")
             item.setForeground(QtGui.QColor(color))
-            item.setToolTip(f"{row['key']}: {status}")
+            item.setToolTip(f"{row['key']}: {status}\n{row['description']}")
             item.setData(QtCore.Qt.ItemDataRole.UserRole, row)
             self.files.addItem(item)
         self.files.setCurrentRow(keep if keep is not None else 0 if rows else -1)
@@ -380,8 +405,10 @@ class LabelWindow(QtWidgets.QMainWindow):
         if index < 0:
             self.current = None
             self.heading.setText("No hay grabaciones con estos filtros")
+            self.task_description.setText("")
             self.badge.setText("")
             self.badge.setStyleSheet("")
+            self.activity_title.setText("Sin actividad seleccionada")
             for curve in self.curves:
                 curve.clear()
             self._clear_labels()
@@ -399,6 +426,7 @@ class LabelWindow(QtWidgets.QMainWindow):
             self._restore_selection()
             return
         self.current = item
+        self.task_description.setText(f"{row['code']} · {row['description']}")
         self.save_button.setEnabled(True)
         for widget in (self.start, self.stop):
             widget.blockSignals(True)
@@ -498,9 +526,23 @@ class LabelWindow(QtWidgets.QMainWindow):
         legacy = f" | {item.legacy} muestras antiguas por reetiquetar" if item.legacy else ""
         self.status.setText(
             f"{item.unassigned} muestras sin etiqueta{legacy}  ·  Fall/PostImpact protegidas  ·  "
-            f"Walking* → Dynamic, Sitting/Standing/Laying → Static  ·  {self.source.output.name}")
+            f"Caminar/Subir/Bajar → Dynamic, Sentado/De pie/Acostado → Static  ·  {self.source.output.name}")
         self.status.setToolTip(str(self.source.output))
         self.undo_button.setEnabled(bool(item.history))
+        self._update_activity_title()
+
+    def _update_activity_title(self):
+        if self.current is None:
+            self.activity_title.setText("Sin actividad seleccionada")
+            return
+        start, stop = self.selection
+        selected = self.current.labels[(self.current.times >= start) & (self.current.times < stop)]
+        if not len(selected):
+            title = "Sin actividad seleccionada"
+        else:
+            activities = np.unique(selected)
+            title = NAMES[int(activities[0])] if len(activities) == 1 else "Varias actividades"
+        self.activity_title.setText(title)
 
     def select(self, start, stop):
         if self.current is None:
@@ -518,6 +560,7 @@ class LabelWindow(QtWidgets.QMainWindow):
             widget.blockSignals(False)
         self.width_label.setText(f"Δ {stop - start:.2f} s")
         self._sync_regions()
+        self._update_activity_title()
 
     def _numeric_selection(self):
         if self.current is None:

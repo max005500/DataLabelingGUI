@@ -12,7 +12,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from kfall_labeler.editor import AnnotationSource  # noqa: E402
-from loaders.kfall_event_loader import DEFAULT_EXCLUDED_TASKS, TASK_CODES  # noqa: E402
+from loaders.kfall_event_loader import TASK_CODES  # noqa: E402
 
 
 def default_dataset_root():
@@ -30,7 +30,7 @@ def main(argv=None):
     parser.add_argument("--label-dir", type=Path, default=None)
     parser.add_argument("--output", type=Path, default=REPO_ROOT / "annotations" / "kfall_manual_labels.json")
     parser.add_argument("--exclude-tasks", nargs="*", type=str.upper, choices=TASK_CODES,
-                        default=list(DEFAULT_EXCLUDED_TASKS))
+                        default=[], help="Tareas que se ocultaran; por defecto se muestran todas.")
     parser.add_argument("--post-impact-seconds", type=float, default=1.2)
     parser.add_argument("--fall-policy", choices=("pre_impact", "annotated_interval"), default="pre_impact")
     parser.add_argument("--save-frame", type=Path, help="Export an offscreen preview and exit.")

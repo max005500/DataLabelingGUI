@@ -1,7 +1,7 @@
 # KFall Labeler
 
 Interfaz grafica PyQt6/pyqtgraph para etiquetar manualmente las grabaciones de
-KFall con las actividades de UCI HAR.
+KFall con las actividades de UCI HAR y las etiquetas adicionales Subiendo y Bajando.
 
 ```text
 kfall_labeler/
@@ -48,9 +48,9 @@ que `train_kfall.py` usa automaticamente.
 | `--exclude-tasks T05 ...` | Tareas ocultas; sin valores muestra todas. |
 | `--save-frame PNG` | Exporta una captura sin abrir la ventana y termina. |
 
-Las exclusiones por defecto son las de entrenamiento: `T05 T13 T14 T16 T18 T19`.
-Para excluir tambien T15, usa la misma lista en el editor, la calibracion y el
-entrenamiento:
+Por defecto se muestran todas las tareas disponibles (T01-T36), incluidas
+T05, T13-T16 y T18-T19. Esto no cambia las exclusiones del entrenamiento.
+Para ocultar tareas de forma explicita:
 
 ```bash
 .venv/bin/python kfall_labeler/label_kfall_manual.py --exclude-tasks T05 T13 T14 T15 T16 T18 T19
@@ -63,10 +63,18 @@ Las exclusiones solo ocultan grabaciones; sus etiquetas existentes se conservan.
 ![Captura de pantalla de KFall Labeler](assets/kfall-labeler.png)
 
 - **Izquierda:** filtros por sujeto y por estado (todas o solo pendientes), y la
-  lista de grabaciones. Cada grabacion se marca como UCI HAR (●), antigua
+  lista de grabaciones con la descripcion de su tarea KFall en español.
+  La descripcion completa tambien aparece sobre los graficos y como ayuda al
+  pasar el cursor sobre la grabacion. Cada grabacion se marca como UCI HAR (●), antigua
   Dynamic/Static (◐) o pendiente (○).
 - **Derecha:** graficos X, Y y Z sincronizados mas una linea de etiquetas. El
   selector cambia entre acelerometro (g) y giroscopio (deg/s).
+- **Actividad:** muestra el nombre de la etiqueta en la ventana seleccionada;
+  el boton abre el video de referencia de la tarea cuando hay un enlace directo
+  disponible y, en los demas casos, las referencias oficiales de KFall.
+  Las descripciones y los enlaces proceden de la
+  [tabla oficial de tareas y videos](https://docs.google.com/spreadsheets/d/1bkMwB1e_gjYQm-7r2Ago73zv9xzDxeR3lg7WO0toO0E/).
+  T03 solo tiene un nombre de archivo en esa tabla, por lo que abre el sitio oficial.
 - **Ventana temporal:** arrastra sobre la senal para crearla. Arrastra su
   interior para moverla y sus bordes para cambiar su duracion. Tambien puedes
   ajustar inicio y fin con los campos numericos.
@@ -75,12 +83,14 @@ Las exclusiones solo ocultan grabaciones; sus etiquetas existentes se conservan.
 
 | Tecla | Accion |
 |---|---|
-| `1` | WALKING |
-| `2` | WALKING_UPSTAIRS |
-| `3` | WALKING_DOWNSTAIRS |
-| `4` | SITTING |
-| `5` | STANDING |
-| `6` | LAYING |
+| `1` | Caminando |
+| `2` | Subiendo escaleras |
+| `3` | Bajando escaleras |
+| `4` | Sentado |
+| `5` | De pie |
+| `6` | Acostado |
+| `7` | Subiendo |
+| `8` | Bajando |
 | `Supr` | Borrar la etiqueta de la seleccion |
 | `Ctrl+Z` | Deshacer |
 | `Ctrl+S` | Guardar como revisada |
@@ -94,10 +104,16 @@ etiqueta empiezan sin asignar.
 Cada grabacion guarda:
 
 - `activity_intervals`: `[frame_inicio, frame_fin_exclusivo, actividad]`, con
-  la actividad UCI HAR en base 0, como en `preprocess_ucihar.ACTIVITY_LABELS`.
+  los identificadores UCI HAR originales (0-5) y dos extensiones:
+  `6=ASCENDING` (Subiendo) y `7=DESCENDING` (Bajando), independientes de las
+  actividades de escaleras. Los nombres internos se conservan en ingles;
+  los botones, sus ayudas y las etiquetas visibles se muestran en español.
 - `intervals`: la equivalencia usada por el entrenamiento actual de KFall. Las
-  tres actividades de caminar son `Dynamic=1`; SITTING, STANDING y LAYING son
-  `Static=2`.
+  tres actividades de caminar, Subiendo y Bajando son `Dynamic=1`;
+  Sentado, De pie y Acostado son `Static=2`.
+
+El esquema ampliado se identifica como `uci_har_extended`; las etiquetas
+guardadas con el esquema anterior siguen siendo compatibles.
 
 Las etiquetas antiguas Dynamic/Static se muestran como "antiguas" y siguen en
 el filtro de pendientes hasta reetiquetarlas con UCI HAR y guardarlas.

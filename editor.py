@@ -14,23 +14,28 @@ import numpy as np
 
 from labeling.kfall_manual_labels import load_manual_labels
 from loaders.kfall_event_loader import (
-    DEFAULT_EXCLUDED_TASKS, KFallEventLoaderConfig, window_activity_labels,
+    KFallEventLoaderConfig, window_activity_labels,
 )
 from preprocess.preprocess_kfall import FILE_RE, load_fall_labels, load_record
+from kfall_labeler.tasks import TASK_DESCRIPTIONS
 
 UCI_HAR_ACTIVITIES = {
     0: "WALKING", 1: "WALKING_UPSTAIRS", 2: "WALKING_DOWNSTAIRS",
     3: "SITTING", 4: "STANDING", 5: "LAYING",
 }
+ACTIVITIES = {**UCI_HAR_ACTIVITIES, 6: "ASCENDING", 7: "DESCENDING"}
+DYNAMIC_ACTIVITIES = (0, 1, 2, 6, 7)
 # Editor-only codes avoid colliding with KFall's Fall/Dynamic/Static/PostImpact ids.
 UCI_CODE_OFFSET = 10
 UCI_CODES = tuple(UCI_CODE_OFFSET + activity for activity in UCI_HAR_ACTIVITIES)
+ACTIVITY_CODES = tuple(UCI_CODE_OFFSET + activity for activity in ACTIVITIES)
 
 
 def training_label(label):
-    """UCI HAR walking activities are Dynamic; postures are Static."""
+    """Walking and ascending/descending are Dynamic; postures are Static."""
     label = np.asarray(label)
-    return np.where(label >= UCI_CODE_OFFSET, np.where(label < UCI_CODE_OFFSET + 3, 1, 2), label)
+    dynamic = np.isin(label, [UCI_CODE_OFFSET + activity for activity in DYNAMIC_ACTIVITIES])
+    return np.where(label >= UCI_CODE_OFFSET, np.where(dynamic, 1, 2), label)
 
 
 def signal_digest(signal, frames):
@@ -53,7 +58,7 @@ def normal_intervals(frames, labels):
 
 def activity_intervals(frames, labels):
     return [[start, stop, label - UCI_CODE_OFFSET]
-            for start, stop, label in _intervals(frames, labels, UCI_CODES)]
+            for start, stop, label in _intervals(frames, labels, ACTIVITY_CODES)]
 
 
 class EditableRecording:
@@ -77,7 +82,7 @@ class EditableRecording:
                         or any(type(value) is not int for value in interval)):
                     raise ValueError(f"{self.key}: actividad UCI HAR mal formada.")
                 start, stop, activity = interval
-                if (activity not in UCI_HAR_ACTIVITIES or start < previous or stop <= start
+                if (activity not in ACTIVITIES or start < previous or stop <= start
                         or start < frames[0] or stop > frames[-1] + 1):
                     raise ValueError(f"{self.key}: intervalos UCI HAR invalidos.")
                 mask = (frames >= start) & (frames < stop) & ~self.protected
@@ -114,7 +119,7 @@ class EditableRecording:
         return training_label(self.labels)
 
     def apply(self, start, stop, label):
-        if (label not in (-1, *UCI_CODES) or not np.isfinite([start, stop]).all()
+        if (label not in (-1, *ACTIVITY_CODES) or not np.isfinite([start, stop]).all()
                 or not 0 <= start < stop <= self.duration):
             raise ValueError("Selecciona un intervalo valido dentro de la grabacion.")
         mask = (self.times >= start - 1e-9) & (self.times < stop - 1e-9) & ~self.protected
@@ -130,7 +135,7 @@ class EditableRecording:
 
 
 class AnnotationSource:
-    def __init__(self, dataset_root, output, *, label_dir=None, excluded_tasks=DEFAULT_EXCLUDED_TASKS,
+    def __init__(self, dataset_root, output, *, label_dir=None, excluded_tasks=(),
                  post_impact_seconds=1.2, fall_policy="pre_impact"):
         root = Path(dataset_root).expanduser().resolve()
         sensor_root = root / "sensor_data" if (root / "sensor_data").is_dir() else root
@@ -169,7 +174,8 @@ class AnnotationSource:
             seen.add(key)
             if code not in excluded_tasks:
                 self.catalog.append({"key": key, "subject": f"SA{subject}", "code": code,
-                                     "trial": f"R{trial}", "file": path})
+                                     "trial": f"R{trial}", "file": path,
+                                     "description": TASK_DESCRIPTIONS[code]})
         if not self.catalog:
             raise ValueError("No hay grabaciones con las exclusiones seleccionadas.")
         if label_dir is None:
@@ -181,7 +187,7 @@ class AnnotationSource:
         entry = self.document["recordings"].get(row["key"])
         if entry is None:
             return "pending"
-        return "uci" if entry.get("label_scheme") == "uci_har" else "legacy"
+        return "uci" if entry.get("label_scheme") in ("uci_har", "uci_har_extended") else "legacy"
 
     def reviewed(self, row):
         return self.status(row) == "uci"
@@ -215,13 +221,14 @@ class AnnotationSource:
         digest = hashlib.sha256(np.asarray(item.frames, dtype="<i8").tobytes())
         digest.update(protected.tobytes())
         document = {**self.document, "recordings": dict(self.document["recordings"]),
-                    "activity_label_scheme": "uci_har",
-                    "activity_labels": {str(k): v for k, v in UCI_HAR_ACTIVITIES.items()},
-                    "activity_to_training": {"Dynamic": [0, 1, 2], "Static": [3, 4, 5]}}
+                    "activity_label_scheme": "uci_har_extended",
+                    "activity_labels": {str(k): v for k, v in ACTIVITIES.items()},
+                    "activity_to_training": {"Dynamic": list(DYNAMIC_ACTIVITIES), "Static": [3, 4, 5]}}
+        scheme = "uci_har_extended" if np.any(np.isin(item.labels, (16, 17))) else "uci_har"
         document["recordings"][item.key] = {
             "file": Path(item.record["file"]).name, "reviewed": True, "intervals": intervals,
             "activity_intervals": activity_intervals(item.frames, item.labels),
-            "label_scheme": "uci_har" if item.legacy == 0 else "mixed_legacy",
+            "label_scheme": scheme if item.legacy == 0 else "mixed_legacy",
             "signal_sha256": signal_digest(item.signal, item.frames),
             "protected_sha256": digest.hexdigest(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
