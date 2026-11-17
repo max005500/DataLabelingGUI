@@ -1,7 +1,8 @@
 # KFall Labeler
 
 Interfaz grafica PyQt6/pyqtgraph para etiquetar manualmente las grabaciones de
-KFall con las actividades de UCI HAR y las etiquetas adicionales Subiendo y Bajando.
+KFall con las actividades de UCI HAR y etiquetas adicionales de transiciones y
+postura agachada/inclinada.
 
 ```text
 kfall_labeler/
@@ -90,8 +91,9 @@ Las exclusiones solo ocultan grabaciones; sus etiquetas existentes se conservan.
 | `4` | Sentado |
 | `5` | De pie |
 | `6` | Acostado |
-| `7` | Subiendo |
-| `8` | Bajando |
+| `7` | Levantándose/Parándose (transición ascendente) |
+| `8` | Inclinándose/Echándose (transición descendente) |
+| `9` | Agachado/Inclinado |
 | `Supr` | Borrar la etiqueta de la seleccion |
 | `Ctrl+Z` | Deshacer |
 | `Ctrl+S` | Guardar como revisada |
@@ -105,13 +107,14 @@ etiqueta empiezan sin asignar.
 Cada grabacion guarda:
 
 - `activity_intervals`: `[frame_inicio, frame_fin_exclusivo, actividad]`, con
-  los identificadores UCI HAR originales (0-5) y dos extensiones:
-  `6=ASCENDING` (Subiendo) y `7=DESCENDING` (Bajando), independientes de las
-  actividades de escaleras. Los nombres internos se conservan en ingles;
+  los identificadores UCI HAR originales (0-5) y tres extensiones:
+  `6=ASCENDING_TRANSITION` (Levantándose/Parándose),
+  `7=DESCENDING_TRANSITION` (Inclinándose/Echándose) y
+  `8=CROUCHING_BENT` (Agachado/Inclinado). Los nombres internos se conservan en ingles;
   los botones, sus ayudas y las etiquetas visibles se muestran en español.
 - `intervals`: la equivalencia usada por el entrenamiento actual de KFall. Las
-  tres actividades de caminar, Subiendo y Bajando son `Dynamic=1`;
-  Sentado, De pie y Acostado son `Static=2`.
+  tres actividades de caminar y las dos transiciones son `Dynamic=1`;
+  Sentado, De pie, Acostado y Agachado/Inclinado son `Static=2`.
 
 El esquema ampliado se identifica como `uci_har_extended`; las etiquetas
 guardadas con el esquema anterior siguen siendo compatibles.

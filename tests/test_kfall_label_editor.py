@@ -106,22 +106,25 @@ class LabelEditorTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             item.apply(0.1, 0.1, 10)
 
-    def test_ascending_descending_roundtrip_and_dynamic_training(self):
+    def test_transitions_and_crouching_roundtrip_and_training_mapping(self):
         row = next(row for row in self.source.catalog if row["code"] == "T20")
         item = self.source.load(row)
         item.apply(0, item.duration, 16)
-        item.apply(0.14, item.duration, 17)
+        item.apply(0.14, 0.17, 17)
+        item.apply(0.17, item.duration, 18)
         np.testing.assert_array_equal(item.labels[item.protected], item.base[item.protected])
         self.source.save(item)
         document = json.loads(self.source.output.read_text())
         self.assertEqual(document["recordings"][item.key]["activity_intervals"],
-                         [[101, 106, 6], [115, 121, 7]])
+                         [[101, 106, 6], [115, 118, 7], [118, 121, 8]])
         self.assertEqual(document["activity_to_training"]["Dynamic"], [0, 1, 2, 6, 7])
+        self.assertEqual(document["activity_to_training"]["Static"], [3, 4, 5, 8])
+        self.assertEqual(document["activity_labels"]["8"], "CROUCHING_BENT")
         records, _ = load_manual_labels(self.source.output)
         metadata = {**item.record, "manual_intervals": records[item.key]["intervals"]}
         np.testing.assert_array_equal(window_activity_labels(item.frames, metadata, self.source.config),
                                       item.training_labels)
-        self.assertTrue(np.all(item.training_labels[~item.protected] == 1))
+        self.assertEqual(records[item.key]["intervals"], [[101, 106, 1], [115, 118, 1], [118, 121, 2]])
         reopened = AnnotationSource(self.root, self.source.output, post_impact_seconds=0.05)
         np.testing.assert_array_equal(reopened.load(row).labels, item.labels)
         self.assertTrue(reopened.reviewed(row))

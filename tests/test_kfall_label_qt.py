@@ -107,20 +107,22 @@ class LabelQtTests(unittest.TestCase):
     def test_spanish_activity_buttons_and_new_shortcuts(self):
         window = self.window
         names = ("Caminando", "Subiendo escaleras", "Bajando escaleras",
-                 "Sentado", "De pie", "Acostado", "Subiendo", "Bajando")
+                 "Sentado", "De pie", "Acostado", "Levantándose/Parándose",
+                 "Inclinándose/Echándose", "Agachado/Inclinado")
         for number, name in enumerate(names, start=1):
             self.assertEqual(window.activity_buttons[number + 9].text(), f"{number}   {name}")
         window.select(0, window.current.duration)
         window.activateWindow()
         window.setFocus()
         self.app.processEvents()
-        for key, code, name in ((QtCore.Qt.Key.Key_7, 16, "Subiendo"),
-                                (QtCore.Qt.Key.Key_8, 17, "Bajando")):
+        for key, code, name in ((QtCore.Qt.Key.Key_7, 16, "Levantándose/Parándose"),
+                                (QtCore.Qt.Key.Key_8, 17, "Inclinándose/Echándose"),
+                                (QtCore.Qt.Key.Key_9, 18, "Agachado/Inclinado")):
             QtTest.QTest.keyClick(window, key)
             self.assertTrue(np.all(window.current.labels == code))
             self.assertEqual(window.activity_title.text(), name)
         window.undo()
-        self.assertTrue(np.all(window.current.labels == 16))
+        self.assertTrue(np.all(window.current.labels == 17))
 
     def test_cancel_navigation_and_partial_save_protect_changes(self):
         window = self.window

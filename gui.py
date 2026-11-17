@@ -13,14 +13,16 @@ ACTIVITY_NAMES = {
     "WALKING": "Caminando", "WALKING_UPSTAIRS": "Subiendo escaleras",
     "WALKING_DOWNSTAIRS": "Bajando escaleras", "SITTING": "Sentado",
     "STANDING": "De pie", "LAYING": "Acostado",
-    "ASCENDING": "Subiendo", "DESCENDING": "Bajando",
+    "ASCENDING_TRANSITION": "Levantándose/Parándose",
+    "DESCENDING_TRANSITION": "Inclinándose/Echándose",
+    "CROUCHING_BENT": "Agachado/Inclinado",
 }
 NAMES = {-1: "Sin etiqueta", 0: "Fall (protegida)", 1: "Dynamic (antigua)", 2: "Static (antigua)",
          3: "PostImpact (protegida)",
          **{UCI_CODE_OFFSET + k: ACTIVITY_NAMES[v] for k, v in ACTIVITIES.items()}}
 COLORS = {-1: "#334155", 0: "#f43f5e", 1: "#64748b", 2: "#94a3b8", 3: "#fb923c",
           10: "#38bdf8", 11: "#818cf8", 12: "#c084fc", 13: "#34d399", 14: "#facc15", 15: "#2dd4bf",
-          16: "#fb7185", 17: "#fbbf24"}
+          16: "#fb7185", 17: "#fbbf24", 18: "#a3e635"}
 AXIS_COLORS = ("#f472b6", "#38bdf8", "#a3e635")
 BG, PANEL, CARD, BORDER, TEXT, MUTED, ACCENT = (
     "#0b1120", "#111827", "#172033", "#263449", "#e5e7eb", "#94a3b8", "#8b5cf6")
@@ -184,7 +186,7 @@ class LabelWindow(QtWidgets.QMainWindow):
         self.task_description.setWordWrap(True)
         top_layout.addWidget(self.task_description)
         hint = label("Arrastra sobre la senal para crear una ventana; mueve su interior o ajusta sus bordes  ·  "
-                     "Rueda: zoom  ·  Ctrl+arrastre: mover vista  ·  1-8: etiquetar  ·  Supr: borrar", "hint")
+                     "Rueda: zoom  ·  Ctrl+arrastre: mover vista  ·  1-9: etiquetar  ·  Supr: borrar", "hint")
         hint.setWordWrap(True)
         top_layout.addWidget(hint)
         activity_row = QtWidgets.QHBoxLayout()
@@ -526,7 +528,8 @@ class LabelWindow(QtWidgets.QMainWindow):
         legacy = f" | {item.legacy} muestras antiguas por reetiquetar" if item.legacy else ""
         self.status.setText(
             f"{item.unassigned} muestras sin etiqueta{legacy}  ·  Fall/PostImpact protegidas  ·  "
-            f"Caminar/Subir/Bajar → Dynamic, Sentado/De pie/Acostado → Static  ·  {self.source.output.name}")
+            f"Caminar/Transiciones → Dynamic, Sentado/De pie/Acostado/Agachado → Static  ·  "
+            f"{self.source.output.name}")
         self.status.setToolTip(str(self.source.output))
         self.undo_button.setEnabled(bool(item.history))
         self._update_activity_title()

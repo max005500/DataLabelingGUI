@@ -23,8 +23,10 @@ UCI_HAR_ACTIVITIES = {
     0: "WALKING", 1: "WALKING_UPSTAIRS", 2: "WALKING_DOWNSTAIRS",
     3: "SITTING", 4: "STANDING", 5: "LAYING",
 }
-ACTIVITIES = {**UCI_HAR_ACTIVITIES, 6: "ASCENDING", 7: "DESCENDING"}
+ACTIVITIES = {**UCI_HAR_ACTIVITIES, 6: "ASCENDING_TRANSITION", 7: "DESCENDING_TRANSITION",
+              8: "CROUCHING_BENT"}
 DYNAMIC_ACTIVITIES = (0, 1, 2, 6, 7)
+STATIC_ACTIVITIES = tuple(activity for activity in ACTIVITIES if activity not in DYNAMIC_ACTIVITIES)
 # Editor-only codes avoid colliding with KFall's Fall/Dynamic/Static/PostImpact ids.
 UCI_CODE_OFFSET = 10
 UCI_CODES = tuple(UCI_CODE_OFFSET + activity for activity in UCI_HAR_ACTIVITIES)
@@ -32,7 +34,7 @@ ACTIVITY_CODES = tuple(UCI_CODE_OFFSET + activity for activity in ACTIVITIES)
 
 
 def training_label(label):
-    """Walking and ascending/descending are Dynamic; postures are Static."""
+    """Walking and posture transitions are Dynamic; postures are Static."""
     label = np.asarray(label)
     dynamic = np.isin(label, [UCI_CODE_OFFSET + activity for activity in DYNAMIC_ACTIVITIES])
     return np.where(label >= UCI_CODE_OFFSET, np.where(dynamic, 1, 2), label)
@@ -223,8 +225,10 @@ class AnnotationSource:
         document = {**self.document, "recordings": dict(self.document["recordings"]),
                     "activity_label_scheme": "uci_har_extended",
                     "activity_labels": {str(k): v for k, v in ACTIVITIES.items()},
-                    "activity_to_training": {"Dynamic": list(DYNAMIC_ACTIVITIES), "Static": [3, 4, 5]}}
-        scheme = "uci_har_extended" if np.any(np.isin(item.labels, (16, 17))) else "uci_har"
+                    "activity_to_training": {"Dynamic": list(DYNAMIC_ACTIVITIES),
+                                             "Static": list(STATIC_ACTIVITIES)}}
+        extended = [UCI_CODE_OFFSET + activity for activity in ACTIVITIES if activity not in UCI_HAR_ACTIVITIES]
+        scheme = "uci_har_extended" if np.any(np.isin(item.labels, extended)) else "uci_har"
         document["recordings"][item.key] = {
             "file": Path(item.record["file"]).name, "reviewed": True, "intervals": intervals,
             "activity_intervals": activity_intervals(item.frames, item.labels),
