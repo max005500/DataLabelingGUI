@@ -1,0 +1,5 @@
+# Optional annotation editor; no PyTorch installation is needed.
+numpy>=1.24
+pyqtgraph>=0.13.7,<0.15
+openpyxl>=3.1
+PyQt6>=6.6,<7
