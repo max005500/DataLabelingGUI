@@ -8,6 +8,7 @@ kfall_labeler/
 ├── label_kfall_manual.py   # lanzador (linea de comandos)
 ├── gui.py                  # ventana PyQt6/pyqtgraph
 ├── editor.py               # modelo de etiquetas y guardado seguro del JSON
+├── tasks.py                # descripciones y videos de referencia de las tareas KFall
 ├── requirements.txt        # dependencias de la GUI
 ├── dataset/                # copia local de KFall (ver dataset/README.md)
 └── tests/                  # pruebas del modelo y de la interfaz
