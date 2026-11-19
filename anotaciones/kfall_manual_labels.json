@@ -1,0 +1,59 @@
+{
+  "format": "kfall_manual_normal_labels",
+  "version": 1,
+  "dataset": "kfall",
+  "sample_rate_hz": 100,
+  "post_impact_seconds": 1.2,
+  "fall_policy": "pre_impact",
+  "recordings": {
+    "SA06T01R01": {
+      "file": "S06T01R01.csv",
+      "reviewed": true,
+      "intervals": [
+        [
+          1,
+          3073,
+          2
+        ]
+      ],
+      "activity_intervals": [
+        [
+          1,
+          3073,
+          4
+        ]
+      ],
+      "label_scheme": "uci_har",
+      "signal_sha256": "a73d18bc6166c3cf90b11cef6cb5b6edf71c7162c8bc2e8efa9c4c92c7b54de2",
+      "protected_sha256": "3d5575a1dab3f5c238c650186dabb8135dc6af48c13364b7dc8396e559fd4585",
+      "updated_at": "2026-11-19T20:00:37.623098+00:00"
+    }
+  },
+  "activity_label_scheme": "uci_har_extended",
+  "activity_labels": {
+    "0": "WALKING",
+    "1": "WALKING_UPSTAIRS",
+    "2": "WALKING_DOWNSTAIRS",
+    "3": "SITTING",
+    "4": "STANDING",
+    "5": "LAYING",
+    "6": "ASCENDING_TRANSITION",
+    "7": "DESCENDING_TRANSITION",
+    "8": "CROUCHING_BENT"
+  },
+  "activity_to_training": {
+    "Dynamic": [
+      0,
+      1,
+      2,
+      6,
+      7
+    ],
+    "Static": [
+      3,
+      4,
+      5,
+      8
+    ]
+  }
+}

@@ -30,6 +30,7 @@ BG, PANEL, CARD, BORDER, TEXT, MUTED, ACCENT = (
 STYLE = f"""
 * {{ font-family: 'Inter', 'Segoe UI', 'Noto Sans', sans-serif; font-size: 10pt; color: {TEXT}; }}
 QMainWindow, QWidget#root {{ background: {BG}; }}
+QMessageBox {{ background: {PANEL}; }}
 QFrame#card {{ background: {PANEL}; border: 1px solid {BORDER}; border-radius: 14px; }}
 QLabel#title {{ font-size: 17pt; font-weight: 700; }}
 QLabel#subtitle, QLabel#hint, QLabel#status {{ color: {MUTED}; }}
