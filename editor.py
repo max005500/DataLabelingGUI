@@ -17,7 +17,7 @@ from loaders.kfall_event_loader import (
     KFallEventLoaderConfig, window_activity_labels,
 )
 from preprocess.preprocess_kfall import FILE_RE, load_fall_labels, load_record
-from kfall_labeler.tasks import TASK_DESCRIPTIONS
+from tasks import TASK_DESCRIPTIONS
 
 UCI_HAR_ACTIVITIES = {
     0: "WALKING", 1: "WALKING_UPSTAIRS", 2: "WALKING_DOWNSTAIRS",

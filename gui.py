@@ -6,8 +6,8 @@ import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
 import pyqtgraph as pg
 
-from kfall_labeler.editor import ACTIVITIES, ACTIVITY_CODES, UCI_CODE_OFFSET
-from kfall_labeler.tasks import KFALL_REFERENCE_URL, KFALL_TASK_REFERENCE_VIDEOS
+from editor import ACTIVITIES, ACTIVITY_CODES, UCI_CODE_OFFSET
+from tasks import KFALL_REFERENCE_URL, KFALL_TASK_REFERENCE_VIDEOS
 
 ACTIVITY_NAMES = {
     "WALKING": "Caminando", "WALKING_UPSTAIRS": "Subiendo escaleras",

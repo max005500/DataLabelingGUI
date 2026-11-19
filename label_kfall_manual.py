@@ -5,13 +5,15 @@ import argparse
 import os
 from pathlib import Path
 import sys
+from PyQt6 import QtWidgets
+from gui import LabelWindow
 
 TOOL_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TOOL_DIR.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from kfall_labeler.editor import AnnotationSource  # noqa: E402
+from editor import AnnotationSource  # noqa: E402
 from loaders.kfall_event_loader import TASK_CODES  # noqa: E402
 
 
@@ -28,7 +30,8 @@ def main(argv=None):
     parser.add_argument("--dataset-root", type=Path, default=None,
                         help="Default: kfall_labeler/dataset/KFall, then data/KFall.")
     parser.add_argument("--label-dir", type=Path, default=None)
-    parser.add_argument("--output", type=Path, default=REPO_ROOT / "annotations" / "kfall_manual_labels.json")
+    parser.add_argument("--output", type=Path, default=TOOL_DIR / "anotaciones" / "kfall_manual_labels.json",
+                        help="Default: anotaciones/kfall_manual_labels.json, junto al lanzador.")
     parser.add_argument("--exclude-tasks", nargs="*", type=str.upper, choices=TASK_CODES,
                         default=[], help="Tareas que se ocultaran; por defecto se muestran todas.")
     parser.add_argument("--post-impact-seconds", type=float, default=1.2)
@@ -38,11 +41,6 @@ def main(argv=None):
     args.dataset_root = args.dataset_root or default_dataset_root()
     if args.save_frame:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    try:
-        from PyQt6 import QtWidgets
-        from kfall_labeler.gui import LabelWindow
-    except ImportError as exc:
-        parser.error(f"{exc}. Instala: python -m pip install -r kfall_labeler/requirements.txt")
     try:
         source = AnnotationSource(args.dataset_root, args.output, label_dir=args.label_dir,
                                   excluded_tasks=args.exclude_tasks,

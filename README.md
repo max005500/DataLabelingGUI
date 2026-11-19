@@ -39,8 +39,10 @@ Desde la raiz del repositorio:
 ```
 
 Por defecto se abre `kfall_labeler/dataset/KFall`. Si no existe, se usa
-`data/KFall`. Las etiquetas se guardan en `annotations/kfall_manual_labels.json`,
-que `train_kfall.py` usa automaticamente.
+`data/KFall`. Al guardar una grabacion con `Ctrl+S`, se crea la carpeta
+`anotaciones/` junto a `label_kfall_manual.py` si no existe, y se escriben
+las etiquetas en `anotaciones/kfall_manual_labels.json`. Para usar ese archivo
+al entrenar, indica su ruta con `--annotation-file`.
 
 | Opcion | Uso |
 |---|---|
